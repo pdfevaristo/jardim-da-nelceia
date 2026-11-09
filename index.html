@@ -32,7 +32,7 @@ canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
 @media (min-width:800px){.dpad{opacity:.58}.mobile-note{opacity:.65}}
 @media (max-width:560px){#game{width:100vw;height:100dvh;min-height:0}.topbar{top:8px;left:8px;right:8px}.brand{font-size:13px;padding:7px 9px}.counter{font-size:12px;padding:7px 9px}.hint{top:54px;font-size:10px}.dialog{bottom:12px;padding:12px 14px}.dpad{left:10px;bottom:10px;grid-template-columns:repeat(3,43px);grid-template-rows:repeat(2,43px)}.action{right:12px;bottom:14px}.mobile-note{right:12px;bottom:84px}}
 
-/* Final screen */
+/* Ecrã final */
 .final-overlay{display:none;position:absolute;inset:0;background:rgba(12,20,35,.88);backdrop-filter:blur(4px);pointer-events:auto;z-index:20;align-items:center;justify-content:center;padding:16px}
 .final-overlay.show{display:flex;animation:fadeIn .4s ease}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -54,6 +54,39 @@ canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
 .final-card .continue-btn{border:2px solid #ffe7a1;border-radius:12px;background:#a94362;color:white;font-weight:800;padding:10px 18px;font-size:15px;cursor:pointer;margin-top:8px;box-shadow:0 3px 0 #652f49}
 .final-card .continue-btn:hover,.final-card .continue-btn:active{background:#c45678;transform:translateY(1px);box-shadow:0 2px 0 #652f49}
 .final-card .continue-wrap{text-align:center;margin-top:6px}
+
+/* Aviso para dispositivos não suportados ou em orientação vertical */
+.device-notice{
+  display:none;
+  position:absolute;
+  inset:0;
+  z-index:40;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(12,20,35,.94);
+  color:#fff9e9;
+  text-align:center;
+}
+.device-notice.show{display:flex}
+.device-notice-card{
+  width:min(440px,100%);
+  padding:24px;
+  background:linear-gradient(165deg,#e98d4c,#c45a6a);
+  border:4px solid #ffdc83;
+  border-radius:20px;
+  box-shadow:0 0 0 4px #8c4252;
+}
+.device-notice-card h2{
+  margin:0 0 12px;
+  color:#ffe9a8;
+  font-size:clamp(22px,6vw,28px);
+}
+.device-notice-card p{
+  margin:0;
+  font-size:clamp(15px,4vw,18px);
+  line-height:1.5;
+}
 </style>
 </head>
 <body>
@@ -71,6 +104,13 @@ canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
  </div>
  <button class="action" id="action" aria-label="Interagir">♡</button>
  <div class="dialog" id="dialog"><small id="itemName">Uma lembrança</small><p id="message"></p><button id="close">Continuar ♥</button></div>
+</div>
+
+<div class="device-notice" id="deviceNotice" role="status" aria-live="polite">
+  <div class="device-notice-card">
+    <h2>🌷 Um ecrã maior, por favor!</h2>
+    <p id="deviceNoticeMessage"></p>
+  </div>
 </div>
 
 <!-- Ecrã final (passos sequenciais) -->
@@ -133,12 +173,38 @@ const canvas=document.getElementById('world'),ctx=canvas.getContext('2d');
 const game=document.getElementById('game'),counter=document.getElementById('counter');
 const dialog=document.getElementById('dialog'),message=document.getElementById('message'),itemName=document.getElementById('itemName');
 const finalOverlay=document.getElementById('finalOverlay');
+const deviceNotice=document.getElementById('deviceNotice');
+const deviceNoticeMessage=document.getElementById('deviceNoticeMessage');
 const TOTAL=20;
-let W=960,H=600,dpr=1,last=0,found=0,paused=false,gameComplete=false;
+let W=960,H=600,dpr=1,last=0,found=0,paused=false,gameComplete=false,deviceBlocked=false;
 function resize(){const r=game.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);W=960;H=600;ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0)}
-addEventListener('resize',resize);resize();
 const player={x:480,y:330,face:1,speed:190,walk:0};
 const keys={up:false,down:false,left:false,right:false};
+
+function updateDeviceAccess(){
+  const portrait=matchMedia('(orientation: portrait)').matches;
+  const coarsePointer=matchMedia('(pointer: coarse)').matches;
+  const shortScreenSide=Math.min(screen.width,screen.height);
+  const isPhone=coarsePointer&&shortScreenSide<600;
+
+  deviceBlocked=portrait||isPhone;
+  deviceNotice.classList.toggle('show',deviceBlocked);
+
+  if(isPhone){
+    deviceNoticeMessage.textContent='Este jogo só pode ser jogado num tablet, iPad, computador ou outro dispositivo com ecrã maior. Num tablet, roda o dispositivo para a orientação horizontal.';
+  }else if(portrait){
+    deviceNoticeMessage.textContent='Para jogar, roda o tablet ou dispositivo para a orientação horizontal.';
+  }
+
+  if(deviceBlocked){
+    Object.keys(keys).forEach(dir=>keys[dir]=false);
+  }
+}
+updateDeviceAccess();
+addEventListener('resize',()=>{resize();updateDeviceAccess()});
+addEventListener('orientationchange',updateDeviceAccess);
+resize();
+
 const items=[
  {name:'Rosa',emoji:'🌹',color:'#ff77a8',text:'Se cada flor fosse um motivo para te amar, nem o maior jardim do mundo seria suficiente.'},
 {name:'Carta',emoji:'💌',color:'#ff9bba',text:'Há palavras que o coração guarda em silêncio. Esta carta veio apenas lembrar-te o quanto és especial.'},
@@ -213,7 +279,7 @@ function drawPlayer(t){ctx.save();ctx.translate(player.x,player.y);let moving=Ob
  ctx.fillStyle='#55436d';ctx.fillRect(-8,18,7,6);ctx.fillRect(2,18,7,6);
  ctx.restore()}
 function loop(ms){let t=ms/1000,dt=Math.min((ms-last)/1000,.04);last=ms;
- if(!paused&&!gameComplete){let dx=(keys.right?1:0)-(keys.left?1:0),dy=(keys.down?1:0)-(keys.up?1:0);let len=Math.hypot(dx,dy)||1;player.x+=dx/len*player.speed*dt;player.y+=dy/len*player.speed*dt;player.x=Math.max(28,Math.min(932,player.x));player.y=Math.max(85,Math.min(570,player.y));if(dx)player.face=Math.sign(dx)}
+ if(!paused&&!gameComplete&&!deviceBlocked){let dx=(keys.right?1:0)-(keys.left?1:0),dy=(keys.down?1:0)-(keys.up?1:0);let len=Math.hypot(dx,dy)||1;player.x+=dx/len*player.speed*dt;player.y+=dy/len*player.speed*dt;player.x=Math.max(28,Math.min(932,player.x));player.y=Math.max(85,Math.min(570,player.y));if(dx)player.face=Math.sign(dx)}
  drawWorld(t);collectibles.forEach(o=>drawItem(o,t));drawPlayer(t);
  const near=collectibles.find(o=>Math.hypot(o.x-player.x,o.y-player.y)<35);
  if(near){ctx.save();ctx.strokeStyle='#ffe49a';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(near.x,near.y,29+Math.sin(t*7)*3,0,7);ctx.stroke();ctx.restore()}
@@ -231,7 +297,7 @@ function showFinal(){
   document.querySelector('.hint').style.display='none';
 }
 
-function collect(){if(paused||gameComplete)return;let idx=-1,best=48;collectibles.forEach((o,i)=>{let d=Math.hypot(o.x-player.x,o.y-player.y);if(d<best){best=d;idx=i}});if(idx<0)return;let o=collectibles[idx];found++;counter.textContent=`♡ ${found} ${found===1?'lembrança':'lembranças'}`;itemName.textContent=`${o.emoji} ${o.name} encontrada`;message.textContent=o.text;collectibles.splice(idx,1);paused=true;dialog.classList.add('show')}
+function collect(){if(paused||gameComplete||deviceBlocked)return;let idx=-1,best=48;collectibles.forEach((o,i)=>{let d=Math.hypot(o.x-player.x,o.y-player.y);if(d<best){best=d;idx=i}});if(idx<0)return;let o=collectibles[idx];found++;counter.textContent=`♡ ${found} ${found===1?'lembrança':'lembranças'}`;itemName.textContent=`${o.emoji} ${o.name} encontrada`;message.textContent=o.text;collectibles.splice(idx,1);paused=true;dialog.classList.add('show')}
 
 function closeDialog(){
   dialog.classList.remove('show');
