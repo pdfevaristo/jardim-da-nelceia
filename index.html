@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#14283b">
-<title>Jardim de Estrelas — Um jogo de amor</title>
+<title>Jardim da Nelceia — Um jogo de amor</title>
 <style>
 :root{--gold:#ffd47a;--pink:#ff8eae;--ink:#13243a}
 *{box-sizing:border-box}
@@ -60,9 +60,9 @@ canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
 <div id="game">
 <canvas id="world" aria-label="Mundo do jogo Jardim de Estrelas"></canvas>
 <div class="hud">
- <div class="topbar"><div class="brand">✦ JARDIM DE ESTRELAS</div><div class="counter" id="counter">♡ 0 lembranças</div></div>
- <div class="hint">Encontra os objetos brilhantes e descobre as mensagens 💗</div>
- <div class="mobile-note">WASD / setas</div>
+ <div class="topbar"><div class="brand">✦ JARDIM DA NELL</div><div class="counter" id="counter">♡ 0 lembranças</div></div>
+ <div class="hint">Encontra os 20 objectos flutuantes e descobre as mensagens 💗</div>
+ <div class="mobile-note">Coletar</div>
  <div class="dpad" aria-label="Controlos direcionais">
   <button class="up" data-dir="up" aria-label="Mover para cima">▲</button>
   <button class="left" data-dir="left" aria-label="Mover para esquerda">◀</button>
@@ -81,7 +81,7 @@ canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
       <h2>✨ Conseguimos!</h2>
       <p class="msg">
         Cada flor, cada estrela e cada pequena lembrança tinha uma mensagem para contar.<br><br>
-        Mas, entre todos os tesouros deste jardim, o mais especial nunca foi um objeto...<br><br>
+        Mas, entre todos os tesouros deste jardim, o mais especial nunca foi um objecto...<br><br>
         Foi a pessoa que tornou esta aventura tão bonita. ❤️
       </p>
       <div class="continue-wrap">
@@ -94,11 +94,10 @@ canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
       <div class="question">
         <strong>O que me darias a honra de receber?</strong>
         <div class="options" id="options">
-          <button class="opt" data-choice="Um abraço apertado e demorado 🤗">Um abraço apertado e demorado 🤗</button>
-          <button class="opt" data-choice="Um beijinho doce (ou vários) 💋">Um beijinho doce (ou vários) 💋</button>
-          <button class="opt" data-choice="Um encontro especial só nosso 🌙">Um encontro especial só nosso 🌙</button>
-          <button class="opt" data-choice="Uma mensagem carinhosa agora 💌">Uma mensagem carinhosa agora 💌</button>
-          <button class="opt" data-choice="Uma surpresa que só tu sabes inventar ✨">Uma surpresa que só tu sabes inventar ✨</button>
+          <button class="opt" data-choice="Um abraço apertado e demorado 🤗">Um abraço 🤗</button>
+          <button class="opt" data-choice="Um beijinho doce (ou vários) 💋">Um beijinho 💋</button>
+          <button class="opt" data-choice="Um encontro especial só nosso 🌙">Um dança 🌙</button>
+          <button class="opt" data-choice="Uma mensagem carinhosa agora 💌">Uma encontro 💌</button>
         </div>
         <div class="chosen" id="chosen"></div>
       </div>
@@ -111,7 +110,7 @@ canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
     <div class="step" id="step3">
       <p class="note">
         Eu não vou saber o que escolheste aqui… então terás de fazer alguma coisa na vida real para eu descobrir 😊<br>
-        (manda mensagem, liga, abraça-me, ou simplesmente aparece com um sorriso)
+        (dança comigo, abraça-me, me dê um beijinho, faça qualquer coisa)
       </p>
       <div class="continue-wrap">
         <button class="continue-btn" id="toStep4">Continuar ♥</button>
@@ -134,7 +133,7 @@ const canvas=document.getElementById('world'),ctx=canvas.getContext('2d');
 const game=document.getElementById('game'),counter=document.getElementById('counter');
 const dialog=document.getElementById('dialog'),message=document.getElementById('message'),itemName=document.getElementById('itemName');
 const finalOverlay=document.getElementById('finalOverlay');
-const TOTAL=15;
+const TOTAL=20;
 let W=960,H=600,dpr=1,last=0,found=0,paused=false,gameComplete=false;
 function resize(){const r=game.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);W=960;H=600;ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0)}
 addEventListener('resize',resize);resize();
@@ -142,25 +141,25 @@ const player={x:480,y:330,face:1,speed:190,walk:0};
 const keys={up:false,down:false,left:false,right:false};
 const items=[
  {name:'Rosa',emoji:'🌹',color:'#ff77a8',text:'Se cada flor fosse um motivo para te amar, nem o maior jardim do mundo seria suficiente.'},
- {name:'Carta',emoji:'💌',color:'#ff9bba',text:'Há palavras que o coração guarda em silêncio. Hoje, esta carta veio lembrar-te que és especial.'},
- {name:'Anel',emoji:'💍',color:'#ffe17a',text:'O amor não é uma promessa perfeita: é escolher cuidar, todos os dias, de algo precioso.'},
- {name:'Coração',emoji:'❤️',color:'#ff557d',text:'O meu lugar favorito é onde a ternura encontra o teu sorriso.'},
- {name:'Cristal',emoji:'💎',color:'#8deaff',text:'Até a noite mais escura ganha brilho quando existe alguém que ilumina os nossos pensamentos.'},
- {name:'Borboleta',emoji:'🦋',color:'#b6a2ff',text:'O amor bonito dá asas: não prende, inspira-nos a florescer.'},
- {name:'Estrela',emoji:'⭐',color:'#ffe18b',text:'Se pudesse escolher uma estrela para guardar, escolheria o instante em que te conheci.'},
- {name:'Lua',emoji:'🌙',color:'#d9d5ff',text:'Mesmo nas noites mais longas, a tua presença faz tudo parecer mais tranquilo.'},
- {name:'Girassol',emoji:'🌻',color:'#ffd45e',text:'Tal como um girassol procura a luz, o meu coração encontra alegria em ti.'},
- {name:'Presente',emoji:'🎁',color:'#ff8c9e',text:'O maior presente não vem embrulhado: é ter alguém especial para partilhar a vida.'},
- {name:'Chave',emoji:'🗝️',color:'#f4d477',text:'Há pessoas que encontram a chave para os lugares mais bonitos do nosso coração.'},
- {name:'Pena',emoji:'🪶',color:'#d9e7ef',text:'Que o nosso carinho seja leve como uma pena e forte o suficiente para atravessar qualquer distância.'},
- {name:'Concha',emoji:'🐚',color:'#f3b5c5',text:'Como o mar guarda histórias nas suas conchas, guardo momentos contigo no coração.'},
- {name:'Poção',emoji:'🧪',color:'#9de7c0',text:'Uma pequena dose de carinho pode transformar um dia comum num momento inesquecível.'},
- {name:'Bolo',emoji:'🎂',color:'#ffb6a3',text:'A vida fica mais doce quando podemos celebrar as pequenas alegrias juntos.'},
- {name:'Buquê',emoji:'💐',color:'#f59ac2',text:'Cada flor deste buquê representa um pensamento bonito que tenho por ti.'},
- {name:'Urso de peluche',emoji:'🧸',color:'#c99b78',text:'Um abraço pode não resolver tudo, mas pode tornar qualquer dificuldade mais leve.'},
- {name:'Diamante azul',emoji:'🔷',color:'#82cfff',text:'Há coisas raras que merecem ser cuidadas. A tua presença é uma delas.'},
- {name:'Borboleta dourada',emoji:'🦋',color:'#f5cf70',text:'A beleza está nas pequenas transformações que nos fazem crescer.'},
- {name:'Música',emoji:'🎵',color:'#c5a5ff',text:'Algumas pessoas tornam a vida numa melodia que queremos ouvir sempre.'}
+{name:'Carta',emoji:'💌',color:'#ff9bba',text:'Há palavras que o coração guarda em silêncio. Esta carta veio apenas lembrar-te o quanto és especial.'},
+{name:'Anel',emoji:'💍',color:'#ffe17a',text:'O amor não é uma promessa perfeita: é escolher cuidar, todos os dias, de algo verdadeiramente precioso.'},
+{name:'Coração',emoji:'❤️',color:'#ff557d',text:'O meu lugar favorito no mundo é onde a ternura encontra o teu sorriso.'},
+{name:'Cristal',emoji:'💎',color:'#8deaff',text:'Até a noite mais escura ganha brilho quando alguém ilumina os nossos pensamentos.'},
+{name:'Borboleta',emoji:'🦋',color:'#b6a2ff',text:'O amor bonito dá asas: não prende, inspira-nos a florescer.'},
+{name:'Estrela',emoji:'⭐',color:'#ffe18b',text:'Se pudesse escolher uma estrela para guardar, escolheria o instante em que te conheci.'},
+{name:'Lua',emoji:'🌙',color:'#d9d5ff',text:'Mesmo nas noites mais longas, a tua presença torna tudo mais sereno.'},
+{name:'Girassol',emoji:'🌻',color:'#ffd45e',text:'Tal como o girassol procura a luz, o meu coração encontra alegria em ti.'},
+{name:'Presente',emoji:'🎁',color:'#ff8c9e',text:'O maior presente não vem embrulhado: é ter alguém especial com quem partilhar a vida.'},
+{name:'Chave',emoji:'🗝️',color:'#f4d477',text:'Há pessoas que encontram a chave para os lugares mais bonitos do nosso coração.'},
+{name:'Pena',emoji:'🪶',color:'#d9e7ef',text:'Que o nosso carinho seja leve como uma pena e forte o suficiente para atravessar qualquer distância.'},
+{name:'Concha',emoji:'🐚',color:'#f3b5c5',text:'Como o mar guarda histórias nas suas conchas, guardo no coração cada momento contigo.'},
+{name:'Poção',emoji:'🧪',color:'#9de7c0',text:'Uma pequena dose de carinho pode transformar um dia comum num momento inesquecível.'},
+{name:'Bolo',emoji:'🎂',color:'#ffb6a3',text:'A vida fica mais doce quando celebramos juntos as pequenas alegrias.'},
+{name:'Buquê',emoji:'💐',color:'#f59ac2',text:'Cada flor deste buquê representa um pensamento bonito que tenho por ti.'},
+{name:'Urso de peluche',emoji:'🧸',color:'#c99b78',text:'Um abraço pode não resolver tudo, mas torna qualquer dificuldade mais leve.'},
+{name:'Diamante azul',emoji:'🔷',color:'#82cfff',text:'Há coisas raras que merecem ser cuidadas. A tua presença é uma delas.'},
+{name:'Borboleta dourada',emoji:'🦋',color:'#f5cf70',text:'A verdadeira beleza está nas pequenas transformações que nos fazem crescer juntos.'},
+{name:'Música',emoji:'🎵',color:'#c5a5ff',text:'Algumas pessoas transformam a vida numa melodia que queremos ouvir para sempre.'}
 ];
 
 // Garantir objetos únicos: embaralhar e pegar os primeiros 15
