@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#14283b">
+<title>Jardim de Estrelas — Um jogo de amor</title>
+<style>
+:root{--gold:#ffd47a;--pink:#ff8eae;--ink:#13243a}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101e31;color:#fff;font-family:ui-rounded,system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}
+body{display:grid;place-items:center}
+#game{position:relative;width:min(100vw,calc(100vh * 1.6));height:min(100vh,calc(100vw / 1.6));min-height:320px;overflow:hidden;background:#1b3345;box-shadow:0 0 60px #0009}
+canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+.hud{position:absolute;inset:0;pointer-events:none}
+.topbar{position:absolute;left:14px;right:14px;top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand,.counter{background:#10263dcc;border:2px solid #ffd47a;border-radius:14px;padding:8px 12px;box-shadow:0 3px 0 #6e3d4d;color:#fff4dc;font-weight:800;text-shadow:0 2px #6e3d4d}
+.brand{letter-spacing:.04em}.counter{font-size:14px}
+.hint{position:absolute;top:62px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#14283bc9;border:1px solid #ffffff35;border-radius:20px;padding:6px 12px;font-size:12px;color:#fce8ca}
+.dialog{display:none;position:absolute;left:50%;bottom:18px;transform:translateX(-50%);width:min(680px,calc(100% - 24px));background:#e98d4c;border:5px solid #ffdc83;border-radius:18px;box-shadow:0 0 0 4px #8c4252,0 8px 0 #652f49;padding:15px 18px 16px;color:#fff9e9;pointer-events:auto}
+.dialog.show{display:block;animation:pop .22s ease-out}
+@keyframes pop{from{transform:translate(-50%,12px) scale(.96);opacity:0}to{transform:translate(-50%,0) scale(1);opacity:1}}
+.dialog small{display:block;color:#ffe5a8;font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+.dialog p{margin:0 0 12px;font-size:clamp(15px,2.4vw,21px);line-height:1.35;font-weight:750;text-shadow:0 2px #9b4c4b}
+.dialog button{border:2px solid #ffe7a1;border-radius:10px;background:#a94362;color:white;font-weight:800;padding:8px 14px;float:right}
+.dpad{position:absolute;left:14px;bottom:14px;display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,48px);gap:5px;pointer-events:auto;opacity:.92}
+.dpad button,.action{border:2px solid #ffdb8c;background:#18364ddd;color:#fff;border-radius:13px;font-size:22px;font-weight:900;box-shadow:0 3px 0 #783e55;touch-action:none;user-select:none}
+.dpad button:active,.action:active{transform:translateY(2px);box-shadow:0 1px 0 #783e55;background:#a34c68}
+.dpad .up{grid-column:2}.dpad .left{grid-column:1;grid-row:2}.dpad .down{grid-column:2;grid-row:2}.dpad .right{grid-column:3;grid-row:2}
+.action{position:absolute;right:16px;bottom:20px;width:62px;height:62px;border-radius:50%;font-size:25px;pointer-events:auto}
+.mobile-note{position:absolute;right:16px;bottom:90px;color:#fff9d8;background:#14283bbd;border-radius:10px;padding:6px 9px;font-size:11px}
+@media (min-width:800px){.dpad{opacity:.58}.mobile-note{opacity:.65}}
+@media (max-width:560px){#game{width:100vw;height:100dvh;min-height:0}.topbar{top:8px;left:8px;right:8px}.brand{font-size:13px;padding:7px 9px}.counter{font-size:12px;padding:7px 9px}.hint{top:54px;font-size:10px}.dialog{bottom:12px;padding:12px 14px}.dpad{left:10px;bottom:10px;grid-template-columns:repeat(3,43px);grid-template-rows:repeat(2,43px)}.action{right:12px;bottom:14px}.mobile-note{right:12px;bottom:84px}}
+
+/* Final screen */
+.final-overlay{display:none;position:absolute;inset:0;background:rgba(12,20,35,.88);backdrop-filter:blur(4px);pointer-events:auto;z-index:20;align-items:center;justify-content:center;padding:16px}
+.final-overlay.show{display:flex;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.final-card{width:min(520px,100%);background:linear-gradient(165deg,#e98d4c 0%,#c45a6a 100%);border:5px solid #ffdc83;border-radius:22px;box-shadow:0 0 0 4px #8c4252,0 12px 40px #0008;padding:22px 22px 20px;color:#fff9e9;text-align:center;max-height:min(92vh,640px);overflow-y:auto}
+.final-card h2{margin:0 0 12px;font-size:clamp(22px,5vw,28px);color:#ffe9a8;text-shadow:0 2px #7a3040;letter-spacing:.03em}
+.final-card .msg{font-size:clamp(14px,3.2vw,17px);line-height:1.45;font-weight:650;margin:0 0 16px;text-shadow:0 1px #9b4c4b}
+.final-card .question{background:#10263dcc;border:2px solid #ffd47a;border-radius:14px;padding:14px 12px;margin:14px 0 10px;text-align:left}
+.final-card .question strong{display:block;color:#ffe5a8;font-size:15px;margin-bottom:10px;letter-spacing:.02em}
+.final-card .options{display:flex;flex-direction:column;gap:8px}
+.final-card .opt{display:block;width:100%;border:2px solid #ffe7a1;border-radius:12px;background:#a94362;color:#fff;font-weight:800;padding:11px 12px;font-size:14px;cursor:pointer;text-align:left;transition:transform .12s,background .12s}
+.final-card .opt:hover,.final-card .opt:active{background:#c45678;transform:scale(1.02)}
+.final-card .opt.selected{background:#2d8a6e;border-color:#9dffc8}
+.final-card .note{font-size:13px;line-height:1.4;color:#ffe8c8;margin:12px 0 16px;background:#14283b99;border-radius:10px;padding:10px 12px;border:1px solid #ffffff22}
+.final-card .yt-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid #ffe7a1;border-radius:14px;background:#a94362;color:#fff;font-weight:800;padding:12px 20px;font-size:15px;text-decoration:none;box-shadow:0 4px 0 #652f49;margin-top:4px}
+.final-card .yt-btn:hover{background:#c45678;transform:translateY(1px);box-shadow:0 3px 0 #652f49}
+.final-card .chosen{margin-top:10px;font-size:14px;color:#d4ffe8;min-height:20px}
+.final-card .step{display:none}
+.final-card .step.visible{display:block;animation:fadeIn .35s ease}
+.final-card .continue-btn{border:2px solid #ffe7a1;border-radius:12px;background:#a94362;color:white;font-weight:800;padding:10px 18px;font-size:15px;cursor:pointer;margin-top:8px;box-shadow:0 3px 0 #652f49}
+.final-card .continue-btn:hover,.final-card .continue-btn:active{background:#c45678;transform:translateY(1px);box-shadow:0 2px 0 #652f49}
+.final-card .continue-wrap{text-align:center;margin-top:6px}
+</style>
+</head>
+<body>
+<div id="game">
+<canvas id="world" aria-label="Mundo do jogo Jardim de Estrelas"></canvas>
+<div class="hud">
+ <div class="topbar"><div class="brand">✦ JARDIM DE ESTRELAS</div><div class="counter" id="counter">♡ 0 lembranças</div></div>
+ <div class="hint">Encontra os objetos brilhantes e descobre as mensagens 💗</div>
+ <div class="mobile-note">WASD / setas</div>
+ <div class="dpad" aria-label="Controlos direcionais">
+  <button class="up" data-dir="up" aria-label="Mover para cima">▲</button>
+  <button class="left" data-dir="left" aria-label="Mover para esquerda">◀</button>
+  <button class="down" data-dir="down" aria-label="Mover para baixo">▼</button>
+  <button class="right" data-dir="right" aria-label="Mover para direita">▶</button>
+ </div>
+ <button class="action" id="action" aria-label="Interagir">♡</button>
+ <div class="dialog" id="dialog"><small id="itemName">Uma lembrança</small><p id="message"></p><button id="close">Continuar ♥</button></div>
+</div>
+
+<!-- Ecrã final (passos sequenciais) -->
+<div class="final-overlay" id="finalOverlay">
+  <div class="final-card">
+    <!-- Passo 1: Mensagem -->
+    <div class="step visible" id="step1">
+      <h2>✨ Conseguimos!</h2>
+      <p class="msg">
+        Cada flor, cada estrela e cada pequena lembrança tinha uma mensagem para contar.<br><br>
+        Mas, entre todos os tesouros deste jardim, o mais especial nunca foi um objeto...<br><br>
+        Foi a pessoa que tornou esta aventura tão bonita. ❤️
+      </p>
+      <div class="continue-wrap">
+        <button class="continue-btn" id="toStep2">Continuar ♥</button>
+      </div>
+    </div>
+
+    <!-- Passo 2: Pergunta + opções -->
+    <div class="step" id="step2">
+      <div class="question">
+        <strong>O que me darias a honra de receber?</strong>
+        <div class="options" id="options">
+          <button class="opt" data-choice="Um abraço apertado e demorado 🤗">Um abraço apertado e demorado 🤗</button>
+          <button class="opt" data-choice="Um beijinho doce (ou vários) 💋">Um beijinho doce (ou vários) 💋</button>
+          <button class="opt" data-choice="Um encontro especial só nosso 🌙">Um encontro especial só nosso 🌙</button>
+          <button class="opt" data-choice="Uma mensagem carinhosa agora 💌">Uma mensagem carinhosa agora 💌</button>
+          <button class="opt" data-choice="Uma surpresa que só tu sabes inventar ✨">Uma surpresa que só tu sabes inventar ✨</button>
+        </div>
+        <div class="chosen" id="chosen"></div>
+      </div>
+      <div class="continue-wrap">
+        <button class="continue-btn" id="toStep3">Continuar ♥</button>
+      </div>
+    </div>
+
+    <!-- Passo 3: Aviso -->
+    <div class="step" id="step3">
+      <p class="note">
+        Eu não vou saber o que escolheste aqui… então terás de fazer alguma coisa na vida real para eu descobrir 😊<br>
+        (manda mensagem, liga, abraça-me, ou simplesmente aparece com um sorriso)
+      </p>
+      <div class="continue-wrap">
+        <button class="continue-btn" id="toStep4">Continuar ♥</button>
+      </div>
+    </div>
+
+    <!-- Passo 4: Botão YouTube -->
+    <div class="step" id="step4">
+      <a class="yt-btn" href="https://www.youtube.com/watch?v=2Vv-BfVoq4g" target="_blank" rel="noopener">
+        ▶ Ouvir “Perfect” — Ed Sheeran
+      </a>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+(()=>{
+const canvas=document.getElementById('world'),ctx=canvas.getContext('2d');
+const game=document.getElementById('game'),counter=document.getElementById('counter');
+const dialog=document.getElementById('dialog'),message=document.getElementById('message'),itemName=document.getElementById('itemName');
+const finalOverlay=document.getElementById('finalOverlay');
+const TOTAL=15;
+let W=960,H=600,dpr=1,last=0,found=0,paused=false,gameComplete=false;
+function resize(){const r=game.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);W=960;H=600;ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0)}
+addEventListener('resize',resize);resize();
+const player={x:480,y:330,face:1,speed:190,walk:0};
+const keys={up:false,down:false,left:false,right:false};
+const items=[
+ {name:'Rosa',emoji:'🌹',color:'#ff77a8',text:'Se cada flor fosse um motivo para te amar, nem o maior jardim do mundo seria suficiente.'},
+ {name:'Carta',emoji:'💌',color:'#ff9bba',text:'Há palavras que o coração guarda em silêncio. Hoje, esta carta veio lembrar-te que és especial.'},
+ {name:'Anel',emoji:'💍',color:'#ffe17a',text:'O amor não é uma promessa perfeita: é escolher cuidar, todos os dias, de algo precioso.'},
+ {name:'Coração',emoji:'❤️',color:'#ff557d',text:'O meu lugar favorito é onde a ternura encontra o teu sorriso.'},
+ {name:'Cristal',emoji:'💎',color:'#8deaff',text:'Até a noite mais escura ganha brilho quando existe alguém que ilumina os nossos pensamentos.'},
+ {name:'Borboleta',emoji:'🦋',color:'#b6a2ff',text:'O amor bonito dá asas: não prende, inspira-nos a florescer.'},
+ {name:'Estrela',emoji:'⭐',color:'#ffe18b',text:'Se pudesse escolher uma estrela para guardar, escolheria o instante em que te conheci.'},
+ {name:'Lua',emoji:'🌙',color:'#d9d5ff',text:'Mesmo nas noites mais longas, a tua presença faz tudo parecer mais tranquilo.'},
+ {name:'Girassol',emoji:'🌻',color:'#ffd45e',text:'Tal como um girassol procura a luz, o meu coração encontra alegria em ti.'},
+ {name:'Presente',emoji:'🎁',color:'#ff8c9e',text:'O maior presente não vem embrulhado: é ter alguém especial para partilhar a vida.'},
+ {name:'Chave',emoji:'🗝️',color:'#f4d477',text:'Há pessoas que encontram a chave para os lugares mais bonitos do nosso coração.'},
+ {name:'Pena',emoji:'🪶',color:'#d9e7ef',text:'Que o nosso carinho seja leve como uma pena e forte o suficiente para atravessar qualquer distância.'},
+ {name:'Concha',emoji:'🐚',color:'#f3b5c5',text:'Como o mar guarda histórias nas suas conchas, guardo momentos contigo no coração.'},
+ {name:'Poção',emoji:'🧪',color:'#9de7c0',text:'Uma pequena dose de carinho pode transformar um dia comum num momento inesquecível.'},
+ {name:'Bolo',emoji:'🎂',color:'#ffb6a3',text:'A vida fica mais doce quando podemos celebrar as pequenas alegrias juntos.'},
+ {name:'Buquê',emoji:'💐',color:'#f59ac2',text:'Cada flor deste buquê representa um pensamento bonito que tenho por ti.'},
+ {name:'Urso de peluche',emoji:'🧸',color:'#c99b78',text:'Um abraço pode não resolver tudo, mas pode tornar qualquer dificuldade mais leve.'},
+ {name:'Diamante azul',emoji:'🔷',color:'#82cfff',text:'Há coisas raras que merecem ser cuidadas. A tua presença é uma delas.'},
+ {name:'Borboleta dourada',emoji:'🦋',color:'#f5cf70',text:'A beleza está nas pequenas transformações que nos fazem crescer.'},
+ {name:'Música',emoji:'🎵',color:'#c5a5ff',text:'Algumas pessoas tornam a vida numa melodia que queremos ouvir sempre.'}
+];
+
+// Garantir objetos únicos: embaralhar e pegar os primeiros 15
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+const uniqueItems=shuffle(items).slice(0,TOTAL);
+
+let collectibles=[];
+const rand=(a,b)=>a+Math.random()*(b-a);
+function spawn(item){
+  let p;
+  do{p={x:rand(90,870),y:rand(105,520)}}while(Math.hypot(p.x-player.x,p.y-player.y)<125);
+  return {...item,...p,phase:rand(0,6.28)};
+}
+uniqueItems.forEach(item=>collectibles.push(spawn(item)));
+
+const plants=Array.from({length:65},()=>({x:rand(18,942),y:rand(20,580),s:rand(.6,1.3),h:Math.random()}));
+const stones=Array.from({length:24},()=>({x:rand(20,940),y:rand(35,570),r:rand(7,17)}));
+const fireflies=Array.from({length:32},()=>({x:rand(0,W),y:rand(0,H),p:rand(0,6.28),s:rand(1,3)}));
+function rounded(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=3;ctx.stroke()}}
+function drawWorld(t){
+ ctx.fillStyle='#20394a';ctx.fillRect(0,0,W,H);
+ ctx.fillStyle='#263e4d';ctx.fillRect(0,0,W,H);
+ for(let y=0;y<H;y+=48)for(let x=0;x<W;x+=48){ctx.fillStyle=((x/48+y/48)%2)?'#294453':'#263f4d';ctx.fillRect(x,y,46,46)}
+ ctx.fillStyle='#49264f';ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(150,0);ctx.lineTo(185,95);ctx.lineTo(145,190);ctx.lineTo(0,205);ctx.fill();
+ ctx.fillStyle='#a92e63';ctx.globalAlpha=.85;ctx.beginPath();ctx.moveTo(0,215);ctx.lineTo(225,215);ctx.lineTo(260,285);ctx.lineTo(215,360);ctx.lineTo(0,360);ctx.fill();ctx.globalAlpha=1;
+ ctx.fillStyle='#49305f';ctx.beginPath();ctx.moveTo(960,420);ctx.lineTo(790,420);ctx.lineTo(745,495);ctx.lineTo(780,600);ctx.lineTo(960,600);ctx.fill();
+ const grd=ctx.createLinearGradient(400,80,620,260);grd.addColorStop(0,'#3c5da1');grd.addColorStop(1,'#9b6d9d');
+ rounded(420,75,190,115,25,grd,'#b98bb9');
+ ctx.fillStyle='#3a4c54';ctx.beginPath();ctx.moveTo(330,250);ctx.lineTo(650,250);ctx.lineTo(720,355);ctx.lineTo(625,445);ctx.lineTo(360,430);ctx.lineTo(290,330);ctx.fill();
+ for(const p of plants){ctx.save();ctx.translate(p.x,p.y);ctx.scale(p.s,p.s);ctx.fillStyle=p.h>.5?'#39785f':'#286b62';for(let k=0;k<3;k++){ctx.save();ctx.rotate((k-1)*.55);ctx.beginPath();ctx.ellipse(0,-8,6,17,0,0,Math.PI*2);ctx.fill();ctx.restore()}ctx.fillStyle='#e2b75e';ctx.fillRect(-2,-4,4,4);ctx.restore()}
+ for(const s of stones){ctx.fillStyle='#526078';ctx.beginPath();ctx.ellipse(s.x,s.y,s.r,s.r*.72,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#78809b';ctx.lineWidth=2;ctx.stroke()}
+ [[260,270],[735,155],[825,350]].forEach(([x,y],i)=>{ctx.save();ctx.shadowBlur=25;ctx.shadowColor='#ffb74d';ctx.fillStyle='#ffbd63';ctx.beginPath();ctx.arc(x,y,18+Math.sin(t*2+i)*2,0,7);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#ffe8a6';ctx.fillRect(x-4,y-17,8,34);ctx.strokeStyle='#b95d55';ctx.lineWidth=4;ctx.strokeRect(x-12,y-20,24,40);ctx.restore()});
+ for(const f of fireflies){let a=(Math.sin(t*1.4+f.p)+1)/2;ctx.save();ctx.globalAlpha=.25+a*.7;ctx.shadowBlur=12;ctx.shadowColor='#ffe77c';ctx.fillStyle='#fff0a1';ctx.beginPath();ctx.arc(f.x+Math.sin(t+f.p)*8,f.y+Math.cos(t*.8+f.p)*6,f.s,0,7);ctx.fill();ctx.restore()}
+}
+function drawItem(o,t){let bob=Math.sin(t*2.6+o.phase)*5;ctx.save();ctx.translate(o.x,o.y+bob);ctx.shadowBlur=22;ctx.shadowColor=o.color;ctx.fillStyle=o.color+'35';ctx.beginPath();ctx.arc(0,0,22+Math.sin(t*3+o.phase)*3,0,7);ctx.fill();ctx.shadowBlur=0;ctx.font='30px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(o.emoji,0,0);ctx.restore()}
+function drawPlayer(t){ctx.save();ctx.translate(player.x,player.y);let moving=Object.values(keys).some(Boolean);let bob=moving?Math.sin(t*13)*2:Math.sin(t*2)*1.5;ctx.translate(0,bob);
+ ctx.fillStyle='#101b2a88';ctx.beginPath();ctx.ellipse(0,15,14,6,0,0,7);ctx.fill();
+ rounded(-10,-2,20,23,7,'#e58c66','#733e56');rounded(-9,0,18,17,6,'#258b88');
+ ctx.fillStyle='#f3b49a';ctx.beginPath();ctx.arc(0,-13,12,0,7);ctx.fill();
+ ctx.fillStyle='#49334d';ctx.beginPath();ctx.arc(0,-17,12,Math.PI,Math.PI*2);ctx.fill();ctx.fillRect(-12,-17,5,9);
+ ctx.fillStyle='#2b283d';ctx.fillRect(-5,-13,2,2);ctx.fillRect(4,-13,2,2);
+ ctx.fillStyle='#f08b9b';ctx.fillRect(-3,-7,6,2);
+ ctx.fillStyle='#ff79a6';ctx.beginPath();ctx.arc(8,-22,4,0,7);ctx.fill();ctx.fillStyle='#ffe38a';ctx.fillRect(7,-24,3,3);
+ ctx.fillStyle='#55436d';ctx.fillRect(-8,18,7,6);ctx.fillRect(2,18,7,6);
+ ctx.restore()}
+function loop(ms){let t=ms/1000,dt=Math.min((ms-last)/1000,.04);last=ms;
+ if(!paused&&!gameComplete){let dx=(keys.right?1:0)-(keys.left?1:0),dy=(keys.down?1:0)-(keys.up?1:0);let len=Math.hypot(dx,dy)||1;player.x+=dx/len*player.speed*dt;player.y+=dy/len*player.speed*dt;player.x=Math.max(28,Math.min(932,player.x));player.y=Math.max(85,Math.min(570,player.y));if(dx)player.face=Math.sign(dx)}
+ drawWorld(t);collectibles.forEach(o=>drawItem(o,t));drawPlayer(t);
+ const near=collectibles.find(o=>Math.hypot(o.x-player.x,o.y-player.y)<35);
+ if(near){ctx.save();ctx.strokeStyle='#ffe49a';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(near.x,near.y,29+Math.sin(t*7)*3,0,7);ctx.stroke();ctx.restore()}
+ requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+
+function showFinal(){
+  gameComplete=true;
+  paused=true;
+  dialog.classList.remove('show');
+  finalOverlay.classList.add('show');
+  document.querySelector('.dpad').style.display='none';
+  document.getElementById('action').style.display='none';
+  document.querySelector('.mobile-note').style.display='none';
+  document.querySelector('.hint').style.display='none';
+}
+
+function collect(){if(paused||gameComplete)return;let idx=-1,best=48;collectibles.forEach((o,i)=>{let d=Math.hypot(o.x-player.x,o.y-player.y);if(d<best){best=d;idx=i}});if(idx<0)return;let o=collectibles[idx];found++;counter.textContent=`♡ ${found} ${found===1?'lembrança':'lembranças'}`;itemName.textContent=`${o.emoji} ${o.name} encontrada`;message.textContent=o.text;collectibles.splice(idx,1);paused=true;dialog.classList.add('show')}
+
+function closeDialog(){
+  dialog.classList.remove('show');
+  if(found>=TOTAL){
+    showFinal();
+  }else{
+    paused=false;
+  }
+}
+
+document.getElementById('close').addEventListener('click',closeDialog);
+document.getElementById('action').addEventListener('pointerdown',e=>{e.preventDefault();collect()});
+document.addEventListener('keydown',e=>{let map={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right',' ':'action',Enter:'action'};let k=map[e.key];if(k){e.preventDefault();if(k==='action')collect();else keys[k]=true}if(e.key==='Escape')closeDialog()});
+document.addEventListener('keyup',e=>{let map={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'};if(map[e.key])keys[map[e.key]]=false});
+document.querySelectorAll('[data-dir]').forEach(btn=>{let dir=btn.dataset.dir;btn.addEventListener('pointerdown',e=>{e.preventDefault();btn.setPointerCapture(e.pointerId);keys[dir]=true});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>btn.addEventListener(ev,()=>keys[dir]=false))});
+canvas.addEventListener('pointerdown',()=>{if(!paused&&!gameComplete)collect()});
+
+// Opções da pergunta
+document.querySelectorAll('.opt').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.opt').forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+    document.getElementById('chosen').textContent = 'Escolheste: ' + btn.dataset.choice + ' 💕';
+  });
+});
+
+// Passos sequenciais do ecrã final
+function goToStep(fromId, toId){
+  document.getElementById(fromId).classList.remove('visible');
+  const next=document.getElementById(toId);
+  next.classList.add('visible');
+}
+document.getElementById('toStep2').addEventListener('click',()=>goToStep('step1','step2'));
+document.getElementById('toStep3').addEventListener('click',()=>goToStep('step2','step3'));
+document.getElementById('toStep4').addEventListener('click',()=>goToStep('step3','step4'));
+})();
+</script>
+</body>
+</html>
